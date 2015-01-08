@@ -1,1 +1,16 @@
-/target/
+#Eclipse
+.project
+.classpath
+.settings
+target
+bin
+out/
+test-output
+
+#IntelliJ IDEA
+nbactions.xml
+.idea/
+*.iml
+
+#Sublime Text
+*.sublime-*
