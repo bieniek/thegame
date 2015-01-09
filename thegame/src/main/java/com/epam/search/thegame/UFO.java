@@ -1,7 +1,5 @@
 package com.epam.search.thegame;
 
-import java.util.Random;
-
 import org.apache.solr.client.solrj.beans.Field;
 
 public class UFO {
@@ -71,24 +69,18 @@ public class UFO {
 	}
 
 	public void move(int distance) {
-		double x =
-				Math.round(new Integer(distance).doubleValue() * Math.cos(new Integer(direction).doubleValue())) +
-				getPosition().getX();
-		double y =
-				Math.round(new Integer(distance).doubleValue() * Math.sin(new Integer(direction).doubleValue())) +
-				getPosition().getY();
+		double x = GameUtils.moveX(getPosition(), distance, direction);
+		double y = GameUtils.moveY(getPosition(), distance, direction);
 
 		if (x >= Game.MAX_X - 2 || y >= Game.MAX_Y - 2 || x < 0 || y < 0) {
-			int rad = (new Random().nextInt(361) + 1);
-			direction = (direction + rad)%360;
+			direction += GameUtils.randDirection();
 		} else {
-			Point newPosition = new Point(x, y);
-			setPosition(newPosition);
+			setPosition(new Point(x, y));
 		}
 	}
 
-	public void escape(int distance ) {
-		direction = (direction + 180)%360;
+	public void escape(int distance) {
+		direction = GameUtils.oppositeDirection(direction);
 		move(distance);
 	}
 
