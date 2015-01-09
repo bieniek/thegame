@@ -26,7 +26,7 @@ public class Game {
 
 	private static final int DISTANCE = 1;
 
-	private JTextArea textArea;
+	private JTextArea board;
 
 	public static void main(String[] args) throws Exception {
 		final SolrServer server = new HttpSolrServer("http://localhost:8983/solr");
@@ -34,13 +34,8 @@ public class Game {
 		server.deleteByQuery("*:*");
 		server.commit();
 
-		List<UFO> ufos = new ArrayList<UFO>();
-		for (int i = 0; i < UFOS_NUMBER; i++) {
-			int dir = GameUtils.randDirection();
-			int x = new Random().nextInt(MAX_X) + 1;
-			int y = new Random().nextInt(MAX_Y) + 1;
-			ufos.add(new UFO("" + i, "ufo" + i, new Point(x, y), dir));
-		}
+		List<UFO> ufos = generate();
+
 		server.addBeans(ufos);
 		server.commit();
 
@@ -51,26 +46,10 @@ public class Game {
 			public void run() {
 				g.createAndShowGui();
 
-				GameLoop loop = g.new GameLoop(server, g.textArea);
+				GameLoop loop = g.new GameLoop(server, g.board);
 				(new Thread(loop)).start();
 			}
 		});
-
-
-	}
-
-	private void createAndShowGui() {
-		JFrame frame = new JFrame("The game");
-		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		JPanel panel = new JPanel();
-		panel.setLayout(new BorderLayout());
-		textArea = new JTextArea(Game.MAX_X, Game.MAX_Y);
-		textArea.setFont(new Font("monospaced", Font.PLAIN, 12));
-		panel.add(textArea);
-		frame.add(panel);
-		frame.pack();
-		frame.setLocationRelativeTo(null);
-		frame.setVisible(true);
 	}
 
 	private class GameLoop implements Runnable {
@@ -78,11 +57,11 @@ public class Game {
 
 		private SolrServer server;
 
-		private JTextArea textArea;
+		private JTextArea board;
 
-		public GameLoop(SolrServer server, JTextArea textArea) {
+		public GameLoop(SolrServer server, JTextArea board) {
 			this.server = server;
-			this.textArea = textArea;
+			this.board = board;
 			this.allQuery = new SolrQuery("*:*").setRows(UFOS_NUMBER);
 		}
 
@@ -112,7 +91,7 @@ public class Game {
 					}
 					server.addBeans(beans);
 					server.commit();
-					draw(beans);
+					GameUtils.drawGameBoard(board, beans);
 					Thread.sleep(10L);
 				}
 			} catch (Exception e) {
@@ -138,37 +117,34 @@ public class Game {
 		}
 
 		private String createCollistionFilterQuery(UFO ufo) {
-			return "{!bbox pt=" + ufo.getPosition().getX() + "," + ufo.getPosition().getY() + " sfield=position d=2}";
+			return String.format("{!bbox pt=%f,%f sfield=position d=2}",
+					ufo.getPosition().getX(),
+					ufo.getPosition().getY());
 		}
+	}
 
-		private void draw(List<UFO> beans) {
-			StringBuffer board = new StringBuffer();
-			for (int i = 0; i < MAX_X; i++) {
-				for (int j = 0; j < MAX_Y; j++) {
-					if (i == 0 || i == MAX_X - 1 || j == 0 || j == MAX_Y - 1) {
-						board.append("x");
-					} else {
-						boolean draw = false;
-						for (UFO ufo : beans) {
-							Point position = ufo.getPosition();
-							if ((position.getX() + 1 == i && position.getY() + 1 == j)) {
-								if (ufo.isCollision()) {
-									board.append("|");
-								} else {
-									board.append("*");
-								}
-								draw = true;
-								break;
-							}
-						}
-						if (!draw) {
-							board.append(" ");
-						}
-					}
-				}
-				board.append("\n");
-			}
-			textArea.setText(board.toString());
+	private static List<UFO> generate() {
+		List<UFO> ufos = new ArrayList<UFO>();
+		for (int i = 0; i < UFOS_NUMBER; i++) {
+			int dir = GameUtils.randDirection();
+			int x = new Random().nextInt(MAX_X) + 1;
+			int y = new Random().nextInt(MAX_Y) + 1;
+			ufos.add(new UFO("" + i, "ufo" + i, new Point(x, y), dir));
 		}
+		return ufos;
+	}
+
+	private void createAndShowGui() {
+		JFrame frame = new JFrame("The game");
+		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		JPanel panel = new JPanel();
+		panel.setLayout(new BorderLayout());
+		board = new JTextArea(Game.MAX_X, Game.MAX_Y);
+		board.setFont(new Font("monospaced", Font.PLAIN, 12));
+		panel.add(board);
+		frame.add(panel);
+		frame.pack();
+		frame.setLocationRelativeTo(null);
+		frame.setVisible(true);
 	}
 }
